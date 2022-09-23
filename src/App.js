@@ -3,10 +3,16 @@ import { useState, useEffect } from "react";
 import './App.css';
 import { useMoralis } from "react-moralis";
 import abi from "./contracts/contract.json";
+import StartMinting from './components/StartMinting';
+import InProgressMinting from './components/InProgressMinting';
+import CompletedMinting from './components/CompletedMinting';
 
 function App() {
   // create a state varaible for supply
   const [totalSupply, setTotalSupply] = useState(0);
+  const [inProgress, setInProgress] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [hash, setHash] = useState();
   const { Moralis, enableWeb3, authenticate, isAuthenticated, isAuthenticating, user, account, logout } = useMoralis();
 
   const logOut = async () => {
@@ -23,6 +29,12 @@ function App() {
     getSupply();
   }, [isAuthenticated])
 
+  const checkEtherScan = () => {
+    if(!hash) return;
+    const url = `https://rinkeby.etherscan.io/tx/${hash}`;
+    window.open(url, '_blank');
+  }
+
   const mint = async () => {
     const sendOptions = {
       contractAddress: "0x718fD0990c355C315fcF5e00130D6f236a31d3E2",
@@ -32,7 +44,14 @@ function App() {
     };
     // add ether to in sendOption for MOralis
     const transaction = await Moralis.executeFunction(sendOptions);
-
+    setHash(transaction.hash);
+    setInProgress(true);
+    // waits a confirmation from the blockchain
+    await transaction.wait();
+    // we are done and confirmed
+    setInProgress(false);
+    setCompleted(true);
+    // here, means we are done and confirmed
   }
 
   // Create a function to get supply of our NFTs
@@ -46,8 +65,11 @@ function App() {
       abi: abi
     };
     // add ether to in sendOption for MOralis
+
+    console.log("yooooo")
     const message = await Moralis.executeFunction(sendOptions);
     setTotalSupply(message.toNumber());
+    // when do we know that transaction is completed
   }
 
   const login = async () => {
@@ -62,6 +84,25 @@ function App() {
         });
     }
   }
+
+  const getState = () => {
+    if(isAuthenticated){    
+      if(inProgress){
+        return <InProgressMinting checkEtherscan={checkEtherScan} />
+      }
+
+      if(completed){
+        return <CompletedMinting />
+      }
+
+      return (
+        <StartMinting mint={mint} logOut={logOut} />
+      )
+    } else {
+      return <div onClick={login} className='wallet'>CONNECT WALLET</div> 
+    }
+  }
+
 
   return (
     <div className="App">
@@ -79,15 +120,7 @@ function App() {
             <h2>YOOOO: INTO THE METAVERSE</h2>
             <div>{totalSupply} minted / 200</div>
             <div className='actions'>
-              {
-                isAuthenticated
-                  ? <div className='mintStart'>
-                      <div onClick={mint} className='wallet'>MINT</div> 
-                      <div onClick={logOut} className='wallet'>START OVER</div> 
-                    </div>
-                  : <div onClick={login} className='wallet'>CONNECT WALLET</div> 
-              }
-
+              {getState()}
             </div>
           </div>
         </div>
