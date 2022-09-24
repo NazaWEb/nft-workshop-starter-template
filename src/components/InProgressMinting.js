@@ -6,7 +6,7 @@ const InProgressMinting = (props) => {
     <div>
         <div>Your NFT is being minted. Please wait.</div>
         <ReactLoading type="bubbles" color="#fff" />
-        <div onClick={props.checkEtherscan} className='wallet'>CHECK ETHERSCAN</div> 
+        <div className='wallet'>CHECK ETHERSCAN</div> 
     </div>
   )
 }
